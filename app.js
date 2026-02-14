@@ -20,13 +20,9 @@ const { seedIfNeeded } = require('./scripts/seed_render_free');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuración CORS
-const frontendUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
-const isProduction = process.env.NODE_ENV === 'production';
-const corsOrigin = isProduction ? frontendUrl : '*';
-
+// Configuración CORS mejorada
 app.use(cors({
-  origin: corsOrigin,
+  origin: true, // Permite cualquier origen en desarrollo
   credentials: true,
 }));
 
@@ -60,12 +56,28 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Ruta de health check para Render
-app.get('/health', (req, res) => {
+// Ruta de health check mejorada para Render
+app.get('/health', async (req, res) => {
+  const dbStatus = process.env.DATABASE_URL ? 'configurada' : 'no configurada';
+  let dbConnected = false;
+  
+  if (process.env.DATABASE_URL) {
+    try {
+      dbConnected = await testConnection();
+    } catch (err) {
+      console.error('Health check - Error BD:', err.message);
+    }
+  }
+  
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    database: process.env.DATABASE_URL ? 'configurada' : 'no configurada'
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      configured: !!process.env.DATABASE_URL,
+      connected: dbConnected
+    },
+    port: PORT
   });
 });
 
@@ -75,25 +87,37 @@ app.use(errorHandler);
 // Iniciar servidor
 async function startServer() {
   try {
-    // Probar conexión a BD
+    // Probar conexión a BD si está configurada
     if (process.env.DATABASE_URL) {
-      await testConnection();
-      // Ejecutar seed en producción
-      if (isProduction) {
-        await seedIfNeeded();
+      console.log('🔄 Verificando conexión a base de datos...');
+      const connected = await testConnection();
+      
+      if (connected) {
+        console.log('✅ Base de datos conectada correctamente');
+        // Ejecutar seed si es necesario
+        if (process.env.NODE_ENV === 'production') {
+          await seedIfNeeded();
+        }
+      } else {
+        console.warn('⚠️ No se pudo conectar a la base de datos, pero el servidor seguirá funcionando');
       }
+    } else {
+      console.warn('⚠️ DATABASE_URL no configurada - las funciones de BD no estarán disponibles');
     }
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => { // Escuchar en todas las interfaces
+      console.log('\n' + '=' .repeat(50));
       console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
       console.log(`📁 Archivos estáticos: ${path.join(__dirname, 'public')}`);
-      console.log(`🌍 Modo: ${isProduction ? 'producción' : 'desarrollo'}`);
+      console.log(`🌍 Modo: ${process.env.NODE_ENV || 'desarrollo'}`);
+      console.log(`🔄 Health check: http://localhost:${PORT}/health`);
+      console.log('=' .repeat(50) + '\n');
     });
   } catch (err) {
     console.error('❌ Error al iniciar servidor:', err.message);
-    // No detener el servidor, solo loguear
-    app.listen(PORT, () => {
-      console.log(`⚠️ Servidor iniciado pero BD no disponible en http://localhost:${PORT}`);
+    // El servidor igual intenta iniciar para el health check
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`⚠️ Servidor iniciado con errores en http://localhost:${PORT}`);
     });
   }
 }
