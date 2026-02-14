@@ -7,20 +7,35 @@ require('dotenv').config();
 const { query, testConnection } = require('../config/db');
 
 async function crearTablas() {
-  console.log('=== Creando tablas en BD de Render ===');
-  console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Configurada' : 'NO CONFIGURADA');
+  console.log('\n' + '=' .repeat(50));
+  console.log('🎬 CREANDO TABLAS EN BASE DE DATOS');
+  console.log('=' .repeat(50) + '\n');
+  
+  console.log('📊 DATABASE_URL:', process.env.DATABASE_URL ? '✅ Configurada' : '❌ NO CONFIGURADA');
   
   if (!process.env.DATABASE_URL) {
-    console.error('❌ DATABASE_URL no configurada.');
+    console.error('\n❌ ERROR: DATABASE_URL no configurada.');
+    console.log('\n💡 Solución:');
+    console.log('1. Ve a tu base de datos en Render');
+    console.log('2. Copia la "Internal Database URL"');
+    console.log('3. Pégala en el archivo .env como DATABASE_URL\n');
     process.exit(1);
   }
 
   // Probar conexión
+  console.log('\n🔄 Probando conexión a la base de datos...');
   const connected = await testConnection();
+  
   if (!connected) {
-    console.error('❌ No se pudo conectar a la base de datos');
+    console.error('\n❌ ERROR: No se pudo conectar a la base de datos');
+    console.log('\n💡 Solución:');
+    console.log('1. Verifica que la URL de la base de datos sea correcta');
+    console.log('2. Asegúrate de que la base de datos esté activa en Render');
+    console.log('3. Espera unos minutos y vuelve a intentar\n');
     process.exit(1);
   }
+
+  console.log('\n✅ Conexión exitosa. Creando tablas...\n');
 
   try {
     // Crear tabla users
@@ -35,9 +50,10 @@ async function crearTablas() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    console.log('✅ Tabla users creada');
 
     // Crear tabla products
-    console.log('📦 Creando tabla products...');
+    console.log('\n📦 Creando tabla products...');
     await query(`
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
@@ -53,9 +69,10 @@ async function crearTablas() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    console.log('✅ Tabla products creada');
 
     // Crear tabla cart
-    console.log('🛒 Creando tabla cart...');
+    console.log('\n🛒 Creando tabla cart...');
     await query(`
       CREATE TABLE IF NOT EXISTS cart (
         id SERIAL PRIMARY KEY,
@@ -66,9 +83,10 @@ async function crearTablas() {
         UNIQUE(user_id, product_id)
       )
     `);
+    console.log('✅ Tabla cart creada');
 
     // Crear tabla orders
-    console.log('📋 Creando tabla orders...');
+    console.log('\n📋 Creando tabla orders...');
     await query(`
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
@@ -78,9 +96,10 @@ async function crearTablas() {
         stripe_payment_intent VARCHAR(255)
       )
     `);
+    console.log('✅ Tabla orders creada');
 
     // Crear tabla order_items
-    console.log('📦 Creando tabla order_items...');
+    console.log('\n📦 Creando tabla order_items...');
     await query(`
       CREATE TABLE IF NOT EXISTS order_items (
         id SERIAL PRIMARY KEY,
@@ -90,12 +109,16 @@ async function crearTablas() {
         precio_unitario DECIMAL(10,2) NOT NULL CHECK (precio_unitario > 0)
       )
     `);
+    console.log('✅ Tabla order_items creada');
 
-    console.log('✅ Tablas creadas correctamente.');
-    console.log('\n🎉 Base de datos lista para usar.');
+    console.log('\n' + '=' .repeat(50));
+    console.log('✅ ¡TODAS LAS TABLAS CREADAS CORRECTAMENTE!');
+    console.log('=' .repeat(50) + '\n');
+    
   } catch (err) {
-    console.error('❌ Error:', err.message);
-    if (err.detail) console.error('Detalle:', err.detail);
+    console.error('\n❌ ERROR:', err.message);
+    if (err.detail) console.error('📋 Detalle:', err.detail);
+    console.log('\n💡 Verifica que la URL de la base de datos sea correcta');
     process.exit(1);
   }
 }
