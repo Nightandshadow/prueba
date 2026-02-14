@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis compras</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="/css/style.css" rel="stylesheet" />
+</head>
+<body class="text-white antialiased">
+  <nav class="glass fixed top-0 left-0 right-0 z-50 mx-4 mt-4 rounded-xl">
+    <div class="flex items-center justify-between px-6 py-4">
+      <a href="/" class="text-xl font-bold flex items-center gap-2"><i data-lucide="store"></i> Tienda</a>
+      <div id="nav-links" data-nav class="flex items-center gap-6"></div>
+    </div>
+  </nav>
+
+  <main class="pt-28 pb-16 px-4 max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8 animate__animated animate__fadeInDown flex items-center gap-2">
+      <i data-lucide="history"></i> Mis compras
+    </h1>
+    
+    <div id="orders-loading" class="flex justify-center py-12">
+      <div class="spinner"></div>
+    </div>
+    
+    <div id="orders-content" class="hidden">
+      <div id="orders-list" class="space-y-4"></div>
+    </div>
+    
+    <div id="orders-empty" class="text-center py-12 text-white/70 hidden">
+      <i data-lucide="shopping-cart" class="w-16 h-16 mx-auto mb-4 opacity-50"></i>
+      <p>No tienes compras registradas.</p>
+      <a href="/index.html" class="inline-block mt-4 text-emerald-400 hover:underline">Ver productos</a>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('redirect');
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+      const loading = document.getElementById('orders-loading');
+      const content = document.getElementById('orders-content');
+      const empty = document.getElementById('orders-empty');
+      const list = document.getElementById('orders-list');
+      
+      try {
+        loading.classList.remove('hidden');
+        
+        const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+        
+        if (orders.length === 0) {
+          empty.classList.remove('hidden');
+          return;
+        }
+        
+        content.classList.remove('hidden');
+        
+        list.innerHTML = orders.map(order => `
+          <div class="glass-card p-6 animate__animated animate__fadeInUp">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h3 class="text-xl font-bold text-emerald-400">Orden #${order.id}</h3>
+                <p class="text-white/70 text-sm">Fecha: ${new Date(order.date).toLocaleDateString()}</p>
+                <p class="text-white/60 text-sm">Estado: <span class="text-emerald-400">${order.status === 'completed' ? 'Completada' : 'Pendiente'}</span></p>
+              </div>
+              <div class="text-right">
+                <p class="text-2xl font-bold text-emerald-400">$${order.total.toFixed(2)}</p>
+              </div>
+            </div>
+            
+            <div class="border-t border-white/20 pt-4">
+              <h4 class="font-semibold mb-2">Productos:</h4>
+              <div class="space-y-2">
+                ${order.items.map(item => `
+                  <div class="flex justify-between items-center">
+                    <div class="flex-1">
+                      <p class="font-medium">${item.nombre}</p>
+                      <p class="text-white/70 text-sm">${item.artista}</p>
+                      <p class="text-white/60 text-sm">Código: ${item.codigo}</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-emerald-400">$${item.precio.toFixed(2)}</p>
+                      <p class="text-white/60 text-sm">x${item.quantity}</p>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `).join('');
+        
+      } catch (error) {
+        loading.classList.add('hidden');
+        empty.innerHTML = '<p class="text-red-300">Error al cargar las compras.</p>';
+      }
+    });
+  </script>
+</body>
+</html>

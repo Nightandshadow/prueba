@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Productos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="/css/style.css" rel="stylesheet" />
+</head>
+<body class="text-white antialiased">
+  <nav class="glass fixed top-0 left-0 right-0 z-50 mx-4 mt-4 rounded-xl">
+    <div class="flex items-center justify-between px-6 py-4">
+      <a href="/" class="text-xl font-bold flex items-center gap-2"><i data-lucide="store"></i> Tienda</a>
+      <div id="nav-links" data-nav class="flex items-center gap-6"></div>
+    </div>
+  </nav>
+
+  <main class="pt-28 pb-16 px-4 max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8 animate__animated animate__fadeInDown flex items-center gap-2">
+      <i data-lucide="shield"></i> Crear producto
+    </h1>
+    <div class="glass-card p-6 mb-8 animate__animated animate__fadeIn">
+      <form id="form-product" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-white/80 mb-1">Nombre</label>
+            <input type="text" name="nombre" required class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-white/30 focus:outline-none" placeholder="Nombre del producto" />
+          </div>
+          <div>
+            <label class="block text-sm text-white/80 mb-1">Código (único)</label>
+            <input type="text" name="codigo" required class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-white/30 focus:outline-none" placeholder="COD-001" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-white/80 mb-1">Precio (> 0)</label>
+            <input type="number" name="precio" required step="0.01" min="0.01" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-white/30 focus:outline-none" placeholder="9.99" />
+          </div>
+          <div>
+            <label class="block text-sm text-white/80 mb-1">Descripción</label>
+            <input type="text" name="descripcion" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-white/30 focus:outline-none" placeholder="Opcional" />
+          </div>
+        </div>
+        <button type="submit" id="btn-create" class="w-full sm:w-auto px-6 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold flex items-center justify-center gap-2">
+          <i data-lucide="plus"></i> Crear producto
+        </button>
+      </form>
+    </div>
+    <h2 class="text-xl font-bold mb-4">Productos existentes</h2>
+    <div id="admin-products-loading" class="flex justify-center py-8"><div class="spinner"></div></div>
+    <div id="admin-products-list" class="space-y-3 hidden"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAdmin()) throw new Error('redirect');
+    lucide.createIcons();
+
+    async function loadProducts() {
+      try {
+        const data = await products.getAll();
+        const el = document.getElementById('admin-products-list');
+        const loading = document.getElementById('admin-products-loading');
+        loading.classList.add('hidden');
+        el.classList.remove('hidden');
+        el.innerHTML = data.length ? data.map(p => `
+          <div class="glass-card p-4 flex flex-wrap justify-between items-center gap-2">
+            <span><strong>${escapeHtml(p.nombre)}</strong> · ${escapeHtml(p.codigo)} · $${Number(p.precio).toFixed(2)}</span>
+          </div>
+        `).join('') : '<p class="text-white/70">No hay productos.</p>';
+      } catch (e) {
+        document.getElementById('admin-products-loading').classList.add('hidden');
+        document.getElementById('admin-products-list').innerHTML = '<p class="text-red-300">Error al cargar.</p>';
+      }
+    }
+
+    document.getElementById('form-product').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const btn = document.getElementById('btn-create');
+      const payload = {
+        nombre: form.nombre.value.trim(),
+        codigo: form.codigo.value.trim(),
+        precio: parseFloat(form.precio.value),
+        descripcion: form.descripcion.value.trim() || null,
+      };
+      if (payload.precio <= 0) {
+        showError('Precio inválido', 'El precio debe ser mayor a 0.');
+        return;
+      }
+      btn.disabled = true;
+      showLoading('Creando producto...');
+      try {
+        await products.create(payload);
+        closeLoading();
+        showSuccess('Producto creado');
+        form.reset();
+        loadProducts();
+      } catch (err) {
+        closeLoading();
+        showError('Error', err.message);
+      }
+      btn.disabled = false;
+    });
+
+    loadProducts();
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  </script>
+</body>
+</html>

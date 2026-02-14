@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tienda de discos - Inicio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="/css/style.css" rel="stylesheet" />
+</head>
+<body class="text-white antialiased">
+  <div class="particle-container" id="particles"></div>
+  
+  <!-- Elementos de grafiti para Hip-Hop -->
+  <div id="hip-hop-elements" class="hidden">
+    <div class="graffiti-tag" style="top: 10%; left: 5%; transform: rotate(-15deg);">HIP-HOP</div>
+    <div class="graffiti-tag" style="top: 20%; right: 8%; transform: rotate(10deg);">URBAN</div>
+    <div class="graffiti-tag" style="bottom: 15%; left: 7%; transform: rotate(-8deg);">BEATS</div>
+    <div class="graffiti-tag" style="bottom: 25%; right: 6%; transform: rotate(12deg);">STREETS</div>
+  </div>
+  
+  <nav class="glass fixed top-0 left-0 right-0 z-50 mx-4 mt-4 rounded-xl persona-enter">
+    <div class="flex items-center justify-between px-6 py-4">
+      <a href="/" class="text-xl font-bold flex items-center gap-2 text-display">
+        <i data-lucide="disc"></i> Tienda de discos
+      </a>
+      <div id="nav-links" data-nav class="flex items-center gap-6 flex-wrap"></div>
+    </div>
+  </nav>
+
+  <main class="pt-28 pb-16 px-4 max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6 animate__animated animate__fadeInDown text-display">Catálogo</h1>
+
+    <div id="products-loading" class="flex justify-center py-12">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="products-empty" class="text-center py-12 text-white/70 hidden">No hay productos. Inicia sesión para ver el catálogo.</div>
+    <div id="products-error" class="text-center py-12 text-red-300 hidden"></div>
+
+    <div id="products-wrap" class="hidden">
+      <div class="genre-tabs animate__animated animate__fadeIn" id="genre-tabs"></div>
+      <div id="products-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"></div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="/js/config.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    (function () {
+      const list = document.getElementById('products-list');
+      const loading = document.getElementById('products-loading');
+      const empty = document.getElementById('products-empty');
+      const errEl = document.getElementById('products-error');
+      const wrap = document.getElementById('products-wrap');
+      const genreTabsEl = document.getElementById('genre-tabs');
+
+      function escapeHtml(s) {
+        if (s == null || s === '') return '';
+        const div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function getYouTubeSearchUrl(artista, nombre) {
+        const q = [artista, nombre].filter(Boolean).join(' ');
+        return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q || nombre || 'album');
+      }
+
+      let allProducts = [];
+      let activeGenre = '';
+
+      function getGenres() {
+        const set = new Set();
+        allProducts.forEach(p => {
+          const g = (p.genero && p.genero.trim()) ? p.genero.trim() : 'Sin género';
+          set.add(g);
+        });
+        return ['', ...Array.from(set).sort()];
+      }
+
+      function filterByGenre(genre) {
+        activeGenre = genre;
+        genreTabsEl.querySelectorAll('.genre-tab').forEach(t => {
+          t.classList.toggle('active', t.dataset.genre === genre);
+        });
+        
+        // Cambiar el tema del body
+        document.body.setAttribute('data-theme', genre || '');
+        
+        // Mostrar/ocultar grafitis para Hip-Hop
+        const hipHopElements = document.getElementById('hip-hop-elements');
+        if (genre === 'Hip-Hop' || genre === 'Urban') {
+          hipHopElements.classList.remove('hidden');
+          // Animar entrada de grafitis
+          hipHopElements.querySelectorAll('.graffiti-tag').forEach((tag, i) => {
+            tag.style.animation = 'none';
+            setTimeout(() => {
+              tag.style.animation = `graffitiFadeIn 1s ease-out forwards`;
+              tag.style.animationDelay = `${i * 0.2}s`;
+            }, 100);
+          });
+        } else {
+          hipHopElements.classList.add('hidden');
+        }
+        
+        renderProducts(activeGenre ? allProducts.filter(p => {
+          const g = (p.genero && p.genero.trim()) ? p.genero.trim() : 'Sin género';
+          return g === activeGenre;
+        }) : allProducts);
+      }
+
+      function renderProducts(products) {
+        list.innerHTML = products.map((p, i) => {
+          const imgSrc = p.imagen ? (p.imagen.startsWith('http') ? p.imagen : '/' + p.imagen.replace(/^\//, '')) : '';
+          const genre = (p.genero && p.genero.trim()) ? p.genero.trim() : '—';
+          const year = p.anio != null && p.anio !== '' ? p.anio : '—';
+          const tracks = p.num_canciones != null && p.num_canciones !== '' ? p.num_canciones + ' temas' : '';
+          const info = p.info_relevante || '';
+          const ytUrl = getYouTubeSearchUrl(p.artista, p.nombre);
+          const theme = p.genero || 'default';
+          return `
+            <div class="album-card glass-card p-4 persona-card-enter" data-genre="${escapeHtml(theme)}" data-theme="${escapeHtml(theme)}" style="animation-delay: ${Math.min(i * 0.1, 1)}s">
+              <div class="album-cover-wrap mb-3">
+                ${imgSrc
+                  ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(p.nombre)}" loading="lazy" />`
+                  : '<div class="album-cover-placeholder"><i data-lucide="disc" class="w-12 h-12"></i></div>'
+                }
+                <div class="shine" aria-hidden="true"></div>
+                <div class="album-glow" aria-hidden="true"></div>
+              </div>
+              <h3 class="font-bold text-sm truncate text-display" title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</h3>
+              ${p.artista ? `<p class="text-white/70 text-xs truncate mt-0.5">${escapeHtml(p.artista)}</p>` : ''}
+              <div class="flex items-center gap-2 mt-1 text-xs text-white/60">
+                <span class="text-mono">${escapeHtml(String(genre))}</span>
+                <span>·</span>
+                <span class="text-mono">${escapeHtml(String(year))}</span>
+              </div>
+              ${tracks ? `<p class="text-xs text-white/50 mt-0.5">${escapeHtml(tracks)}</p>` : ''}
+              ${info ? `<p class="text-xs text-white/50 mt-0.5 line-clamp-2">${escapeHtml(info)}</p>` : ''}
+              <div class="flex items-center justify-between mt-3 gap-2">
+                <span class="text-lg font-bold text-display" style="color: var(--accent, var(--neon-cyan))">$${Number(p.precio).toFixed(2)}</span>
+                <div class="flex items-center gap-1">
+                  <a href="${ytUrl}" target="_blank" rel="noopener noreferrer" class="btn-youtube" title="Buscar en YouTube">
+                    <i data-lucide="play-circle" class="w-4 h-4"></i> YouTube
+                  </a>
+                  <button type="button" data-product-id="${p.id}" class="add-cart flex items-center justify-center w-9 h-9 rounded-lg bg-white/15 hover:bg-white/25 border border-white/20 transition">
+                    <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        lucide.createIcons();
+
+        list.querySelectorAll('.add-cart').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            try {
+              await cart.add(parseInt(btn.dataset.productId, 10));
+              showSuccess('Añadido al carrito');
+            } catch (e) {
+              showError('Error', e.message);
+            }
+          });
+        });
+
+        list.querySelectorAll('.album-card').forEach(card => {
+          const wrap = card.querySelector('.album-cover-wrap');
+          const shine = card.querySelector('.shine');
+          if (!wrap || !shine) return;
+          wrap.addEventListener('mousemove', (e) => {
+            const rect = wrap.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+            shine.style.setProperty('--mouse-x', (x * 100) + '%');
+            shine.style.setProperty('--mouse-y', (y * 100) + '%');
+            var deg = 8;
+            var rotateY = (x - 0.5) * 2 * deg;
+            var rotateX = (y - 0.5) * -2 * deg;
+            card.style.setProperty('--rotate-y', rotateY + 'deg');
+            card.style.setProperty('--rotate-x', rotateX + 'deg');
+          });
+          wrap.addEventListener('mouseleave', () => {
+            card.style.removeProperty('--rotate-y');
+            card.style.removeProperty('--rotate-x');
+          });
+        });
+      }
+
+      async function init() {
+        if (!isLoggedIn()) {
+          loading.classList.add('hidden');
+          empty.classList.remove('hidden');
+          empty.textContent = 'Inicia sesión para ver los productos.';
+          return;
+        }
+
+        try {
+          // Cargar productos desde API o datos locales
+          if (window.USE_API) {
+            console.log('🔄 Cargando productos desde API...');
+            allProducts = await products.getAll();
+            console.log(`✅ ${allProducts.length} productos cargados desde API`);
+          } else {
+            console.log('📦 Cargando productos desde datos locales...');
+            // Cargar TODAS las imágenes disponibles con nombres lógicos
+            allProducts = [
+            // ROCK CLÁSICO
+            {id: 1, nombre: "The Prodigy Experience", artista: "The Prodigy", genero: "Electrónica", anio: "1992", num_canciones: "12", info_relevante: "Portada con fondo negro y cara con rayos láser de colores", precio: 28.99, imagen: "/images/albums/R-26193-1313909388.jpg", codigo: "PRD001"},
+            {id: 2, nombre: "The Fat of the Land", artista: "The Prodigy", genero: "Electrónica", anio: "1997", num_canciones: "10", info_relevante: "Fondo negro con cangrejo rojo/anaranjado", precio: 29.99, imagen: "/images/albums/R-26194-1592430767-5429.jpg", codigo: "PRD002"},
+            {id: 3, nombre: "Straight Outta Compton", artista: "N.W.A", genero: "Hip-Hop", anio: "1988", num_canciones: "13", info_relevante: "Fondo negro con letras N.W.A en rojo y graffiti", precio: 32.99, imagen: "/images/albums/R-103648-1642412832-5480.jpg", codigo: "NWA001"},
+            {id: 4, nombre: "Songs from the Big Chair", artista: "Tears for Fears", genero: "Pop", anio: "1985", num_canciones: "8", info_relevante: "Primer plano de rostro con fondo oscuro y luces de colores", precio: 24.99, imagen: "/images/albums/R-124187-1349004315-5948.jpg", codigo: "TFF001"},
+            {id: 5, nombre: "The Eminem Show", artista: "Eminem", genero: "Hip-Hop", anio: "2002", num_canciones: "20", info_relevante: "Fondo gris con cortina de teatro y Eminem en escenario", precio: 31.99, imagen: "/images/albums/R-176346-1571810543-9832.jpg", codigo: "EMM001"},
+            {id: 6, nombre: "The Chronic", artista: "Dr. Dre", genero: "Hip-Hop", anio: "1992", num_canciones: "16", info_relevante: "Portada con hoja de marihuana y fondo amarillo", precio: 30.99, imagen: "/images/albums/R-226082-1691001549-9816.jpg", codigo: "DRD001"},
+            {id: 7, nombre: "No Limit Compilation", artista: "No Limit Records", genero: "Hip-Hop", anio: "1997", num_canciones: "15", info_relevante: "Compilado con varios artistas de No Limit Records", precio: 28.99, imagen: "/images/albums/R-226365-1154450517.jpg", codigo: "NLM001"},
+            {id: 8, nombre: "All Eyez on Me", artista: "2Pac", genero: "Hip-Hop", anio: "1996", num_canciones: "27", info_relevante: "2Pac con torso desnudo, tatuajes y fondo púrpura", precio: 35.99, imagen: "/images/albums/R-238369-1650818330-8599.jpg", codigo: "TUP001"},
+            {id: 9, nombre: "Get Rich or Die Tryin'", artista: "50 Cent", genero: "Hip-Hop", anio: "2003", num_canciones: "18", info_relevante: "50 Cent con camiseta blanca y cadena de oro", precio: 30.99, imagen: "/images/albums/R-258882-1425707940-8805.jpg", codigo: "50C001"},
+            {id: 10, nombre: "Cowboys from Hell", artista: "Pantera", genero: "Heavy Metal", anio: "1990", num_canciones: "12", info_relevante: "Vaquero esqueleto montando caballo con alas", precio: 31.99, imagen: "/images/albums/R-367301-1610560614-8573.jpg", codigo: "PNT001"},
+            {id: 11, nombre: "Rage Against the Machine", artista: "Rage Against the Machine", genero: "Rock", anio: "1992", num_canciones: "12", info_relevante: "Monje budista quemándose", precio: 29.99, imagen: "/images/albums/R-367339-1615037762-7659.jpg", codigo: "RAT001"},
+            {id: 12, nombre: "Significant Other", artista: "Limp Bizkit", genero: "Nu Metal", anio: "1999", num_canciones: "14", info_relevante: "Robot extraterrestre verde y amarillo", precio: 32.99, imagen: "/images/albums/R-367548-1488165844-3409.jpg", codigo: "LBZ001"},
+            {id: 13, nombre: "Hybrid Theory", artista: "Linkin Park", genero: "Nu Metal", anio: "2000", num_canciones: "12", info_relevante: "Soldado con alas de libélula", precio: 33.99, imagen: "/images/albums/R-369408-1245380540.jpg", codigo: "LP001"},
+            {id: 14, nombre: "Dr. Feelgood", artista: "Mötley Crüe", genero: "Hard Rock", anio: "1989", num_canciones: "10", info_relevante: "Portada con jeringa y fondo rojo", precio: 30.99, imagen: "/images/albums/R-372153-1510939356-6599.jpg", codigo: "MC001"},
+            {id: 15, nombre: "In Utero", artista: "Nirvana", genero: "Grunge", anio: "1993", num_canciones: "12", info_relevante: "Ángel anatómico con alas", precio: 31.99, imagen: "/images/albums/R-375979-1491700347-7263.jpg", codigo: "NV001"},
+            {id: 16, nombre: "Heaven", artista: "Desconocido", genero: "Rock", anio: "1990", num_canciones: "10", info_relevante: "Letras grandes HEAVEN en estilo gótico", precio: 26.99, imagen: "/images/albums/R-376927-1390241414-9337.jpg", codigo: "HVN001"},
+            {id: 17, nombre: "Ride the Lightning", artista: "Metallica", genero: "Thrash Metal", anio: "1984", num_canciones: "8", info_relevante: "Portada con silla eléctrica y rayos", precio: 30.99, imagen: "/images/albums/R-377464-1753530613-1176.jpg", codigo: "MTL002"},
+            {id: 18, nombre: "Evil Empire", artista: "Rage Against the Machine", genero: "Rock", anio: "1996", num_canciones: "11", info_relevante: "Fondo rojo con hombre con megáfono", precio: 31.99, imagen: "/images/albums/R-377569-1401732089-7983.jpg", codigo: "RAT002"},
+            {id: 19, nombre: "Around the Fur", artista: "Deftones", genero: "Nu Metal", anio: "1997", num_canciones: "10", info_relevante: "Chica con cabello mojado y fondo azul/verde", precio: 29.99, imagen: "/images/albums/R-379025-1384964856-3772.jpg", codigo: "DFT001"},
+            {id: 20, nombre: "The Battle of Los Angeles", artista: "Rage Against the Machine", genero: "Rock", anio: "1999", num_canciones: "12", info_relevante: "Brazo robótico sosteniendo bandera", precio: 32.99, imagen: "/images/albums/R-395120-1766349225-9160.jpg", codigo: "RAT003"},
+            {id: 21, nombre: "Restless", artista: "Xzibit", genero: "Hip-Hop", anio: "1996", num_canciones: "14", info_relevante: "Auto lowrider y fondo oscuro", precio: 27.99, imagen: "/images/albums/R-406060-1282167150.jpg", codigo: "XZB001"},
+            {id: 22, nombre: "Fear of the Dark (Remix)", artista: "Iron Maiden", genero: "Heavy Metal", anio: "1993", num_canciones: "8", info_relevante: "Eddie en bosque oscuro, remezclado por Dennis", precio: 31.99, imagen: "/images/albums/R-408154-1281331335.jpg", codigo: "IM002"},
+            {id: 23, nombre: "Garage Inc.", artista: "Metallica", genero: "Heavy Metal", anio: "1998", num_canciones: "27", info_relevante: "Tumba de garaje estilo cementerio", precio: 34.99, imagen: "/images/albums/R-421601-1588467637-9832.jpg", codigo: "MTL003"},
+            {id: 24, nombre: "The Great Southern Trendkill", artista: "Pantera", genero: "Heavy Metal", anio: "1996", num_canciones: "10", info_relevante: "Portada con gallo y fondo amarillo", precio: 32.99, imagen: "/images/albums/R-510962-1310496946.jpg", codigo: "PNT002"},
+            {id: 25, nombre: "...And Justice for All", artista: "Metallica", genero: "Thrash Metal", anio: "1988", num_canciones: "9", info_relevante: "Estatua de la justicia rota", precio: 31.99, imagen: "/images/albums/R-521407-1530044171-6726.jpg", codigo: "MTL004"},
+            {id: 26, nombre: "Ten Thousand Fists", artista: "Disturbed", genero: "Hard Rock", anio: "2005", num_canciones: "12", info_relevante: "Puño robótico gigante y multitudes", precio: 33.99, imagen: "/images/albums/R-525185-1713794276-1309.jpg", codigo: "DSB001"},
+            {id: 27, nombre: "Explicit Lives", artista: "Varios Artistas", genero: "Hip-Hop", anio: "2000", num_canciones: "15", info_relevante: "Recopilatorio con Parental Advisory", precio: 25.99, imagen: "/images/albums/R-545480-1575329994-4241.jpg", codigo: "VAR001"},
+            {id: 28, nombre: "Meteora", artista: "Linkin Park", genero: "Nu Metal", anio: "2003", num_canciones: "13", info_relevante: "Grafiti de soldado en azul/gris", precio: 32.99, imagen: "/images/albums/R-567665-1699809645-7778.jpg", codigo: "LP002"},
+            {id: 29, nombre: "Pleasures of the Flesh", artista: "Exodus", genero: "Thrash Metal", anio: "1987", num_canciones: "10", info_relevante: "Calavera y cuchillos", precio: 28.99, imagen: "/images/albums/R-567793-1419697075-7327.jpg", codigo: "EXO001"},
+            {id: 30, nombre: "Toxicity", artista: "System of a Down", genero: "Alternative Metal", anio: "2001", num_canciones: "14", info_relevante: "Brazo robótico y fondo rojo/naranja", precio: 31.99, imagen: "/images/albums/R-608346-1191032254.jpg", codigo: "SOAD001"},
+            {id: 31, nombre: "Spreading the Disease", artista: "Anthrax", genero: "Thrash Metal", anio: "1985", num_canciones: "10", info_relevante: "Robot (Not Man) y fondo azul", precio: 30.99, imagen: "/images/albums/R-626487-1170628360.jpg", codigo: "ANT001"},
+            {id: 32, nombre: "Fallen", artista: "Evanescence", genero: "Rock Gótico", anio: "2003", num_canciones: "11", info_relevante: "Amy Lee con alas oscuras y fondo negro", precio: 31.99, imagen: "/images/albums/R-641828-1677565078-6926.jpg", codigo: "EV001"},
+            {id: 33, nombre: "Gangsta's Paradise", artista: "Coolio", genero: "Hip-Hop", anio: "1995", num_canciones: "12", info_relevante: "Coolio con pistola de agua", precio: 29.99, imagen: "/images/albums/R-652362-1169333485.jpg", codigo: "COO001"},
+            {id: 34, nombre: "Follow the Leader", artista: "Korn", genero: "Nu Metal", anio: "1998", num_canciones: "13", info_relevante: "Niño con sábana y carrito de compras", precio: 32.99, imagen: "/images/albums/R-655109-1152826458.jpg", codigo: "KRN001"},
+            {id: 35, nombre: "Paranoid", artista: "Black Sabbath", genero: "Heavy Metal", anio: "1970", num_canciones: "8", info_relevante: "Guerrero con espada", precio: 28.99, imagen: "/images/albums/R-696772-1745002523-2045.jpg", codigo: "BS001"},
+            {id: 36, nombre: "Sueño Stereo", artista: "Soda Stereo", genero: "Rock Latino", anio: "1995", num_canciones: "12", info_relevante: "Diseño abstracto con Sony Music", precio: 30.99, imagen: "/images/albums/R-716257-1151166737.jpg", codigo: "SS001"},
+            {id: 37, nombre: "Explicit Lyrics", artista: "Desconocido", genero: "Desconocido", anio: "2000", num_canciones: "15", info_relevante: "Recopilatorio con Parental Advisory", precio: 22.99, imagen: "/images/albums/R-723756-1762659535-6712.jpg", codigo: "UNK001"},
+            {id: 38, nombre: "Vulgar Display of Power", artista: "Pantera", genero: "Groove Metal", anio: "1992", num_canciones: "12", info_relevante: "Puñetazo a la cara", precio: 33.99, imagen: "/images/albums/R-740029-1555265407-4704.jpg", codigo: "PNT003"},
+            {id: 39, nombre: "Shadow Zone", artista: "Static-X", genero: "Industrial Metal", anio: "2003", num_canciones: "12", info_relevante: "Robot/cyborg", precio: 30.99, imagen: "/images/albums/R-747807-1154732093.jpg", codigo: "STX001"},
+            {id: 40, nombre: "Dirty Deeds Done Dirt Cheap", artista: "AC/DC", genero: "Hard Rock", anio: "1976", num_canciones: "9", info_relevante: "Miembros vestidos de gánsteres", precio: 32.99, imagen: "/images/albums/R-773300-1272852415.jpg", codigo: "ACDC001"},
+            {id: 41, nombre: "The Black Parade", artista: "My Chemical Romance", genero: "Rock Alternativo", anio: "2006", num_canciones: "13", info_relevante: "Desfile con esqueleto", precio: 31.99, imagen: "/images/albums/R-815226-1348500314-3481.jpg", codigo: "MCR001"},
+            {id: 42, nombre: "Doggystyle", artista: "Snoop Dogg", genero: "Hip-Hop", anio: "1993", num_canciones: "18", info_relevante: "Perro bulldog y fondo de casa", precio: 32.99, imagen: "/images/albums/R-829287-1654619787-4048.jpg", codigo: "SD001"},
+            {id: 43, nombre: "Paid in Full", artista: "Eric B. & Rakim", genero: "Hip-Hop", anio: "1987", num_canciones: "10", info_relevante: "Hip-hop innovador", precio: 29.99, imagen: "/images/albums/R-3201905-1650555602-9097.jpg", codigo: "EBR001"},
+            {id: 44, nombre: "Criminal Minded", artista: "Boogie Down Productions", genero: "Hip-Hop", anio: "1987", num_canciones: "10", info_relevante: "Hip-hop consciente", precio: 28.99, imagen: "/images/albums/R-3326401-1735917953-5073.jpg", codigo: "BDP001"},
+            {id: 45, nombre: "Low End Theory", artista: "A Tribe Called Quest", genero: "Hip-Hop", anio: "1991", num_canciones: "14", info_relevante: "Hip-hop jazz", precio: 31.99, imagen: "/images/albums/R-33747939-1766436777-4102.jpg", codigo: "ATCQ001"},
+            {id: 46, nombre: "Midnight Marauders", artista: "A Tribe Called Quest", genero: "Hip-Hop", anio: "1993", num_canciones: "14", info_relevante: "Clásico del hip-hop alternativo", precio: 33.99, imagen: "/images/albums/R-367301-1610560614-8573.jpg", codigo: "ATCQ002"},
+            {id: 47, nombre: "Doggystyle", artista: "Snoop Dogg", genero: "Hip-Hop", anio: "1993", num_canciones: "17", info_relevante: "Debut de Snoop Dogg", precio: 31.99, imagen: "/images/albums/R-367339-1615037762-7659.jpg", codigo: "SD002"},
+            {id: 48, nombre: "Ready to Die", artista: "The Notorious B.I.G.", genero: "Hip-Hop", anio: "1994", num_canciones: "17", info_relevante: "Debut legendario", precio: 32.99, imagen: "/images/albums/R-367548-1488165844-3409.jpg", codigo: "BIG002"},
+            {id: 49, nombre: "Life After Death", artista: "The Notorious B.I.G.", genero: "Hip-Hop", anio: "1997", num_canciones: "25", info_relevante: "Álbum póstumo doble", precio: 35.99, imagen: "/images/albums/R-367664-1408907054-7204.jpg", codigo: "BIG003"},
+            {id: 50, nombre: "Aquemini", artista: "OutKast", genero: "Hip-Hop", anio: "1998", num_canciones: "16", info_relevante: "Hip-hop experimental del sur", precio: 34.99, imagen: "/images/albums/R-369408-1245380540.jpg", codigo: "OK001"},
+            {id: 51, nombre: "Stankonia", artista: "OutKast", genero: "Hip-Hop", anio: "2000", num_canciones: "24", info_relevante: "Funk y hip-hop fusión", precio: 33.99, imagen: "/images/albums/R-372153-1510939356-6599.jpg", codigo: "OK002"},
+            {id: 52, nombre: "Speakerboxxx", artista: "OutKast", genero: "Hip-Hop", anio: "2003", num_canciones: "20", info_relevante: "Doble álbum conceptual", precio: 35.99, imagen: "/images/albums/R-3724657-1428004066-3251.jpg", codigo: "OK003"},
+            {id: 53, nombre: "The College Dropout", artista: "Kanye West", genero: "Hip-Hop", anio: "2004", num_canciones: "21", info_relevante: "Debut revolucionario", precio: 34.99, imagen: "/images/albums/R-375979-1491700347-7263.jpg", codigo: "KW001"},
+            {id: 54, nombre: "Late Registration", artista: "Kanye West", genero: "Hip-Hop", anio: "2005", num_canciones: "21", info_relevante: "Hip-hop con orquesta", precio: 33.99, imagen: "/images/albums/R-376927-1390241414-9337.jpg", codigo: "KW002"},
+            {id: 55, nombre: "Graduation", artista: "Kanye West", genero: "Hip-Hop", anio: "2007", num_canciones: "13", info_relevante: "Electro-hop y samples", precio: 32.99, imagen: "/images/albums/R-377464-1753530613-1176.jpg", codigo: "KW003"},
+            {id: 56, nombre: "808s & Heartbreak", artista: "Kanye West", genero: "Hip-Hop", anio: "2008", num_canciones: "12", info_relevante: "Auto-tune emocional", precio: 31.99, imagen: "/images/albums/R-377521-1750781634-7948.jpg", codigo: "KW004"},
+            {id: 57, nombre: "My Beautiful Dark Twisted", artista: "Kanye West", genero: "Hip-Hop", anio: "2010", num_canciones: "13", info_relevante: "Hip-hop maximalista", precio: 33.99, imagen: "/images/albums/R-377569-1401732089-7983.jpg", codigo: "KW005"},
+            {id: 58, nombre: "Watch the Throne", artista: "Jay-Z & Kanye West", genero: "Hip-Hop", anio: "2011", num_canciones: "12", info_relevante: "Colaboración épica", precio: 35.99, imagen: "/images/albums/R-379025-1384964856-3772.jpg", codigo: "JK001"},
+            {id: 59, nombre: "No Hay Truco", artista: "Soda Stereo", genero: "Rock Latino", anio: "1995", num_canciones: "12", info_relevante: "Bootleg con error tipográfico", precio: 28.99, imagen: "/images/albums/R-5771118-1402207523-1300.jpg", codigo: "SS002"},
+            {id: 60, nombre: "G.I. Blues", artista: "Elvis Presley", genero: "Rock", anio: "1960", num_canciones: "12", info_relevante: "Banda sonora original de la película", precio: 34.99, imagen: "/images/albums/R-5870290-1661702310-3331.jpg", codigo: "EP001"},
+            {id: 61, nombre: "Full Moon", artista: "Junko Yagami", genero: "City Pop", anio: "1985", num_canciones: "10", info_relevante: "Cantante japonesa con título Full Moon", precio: 32.99, imagen: "/images/albums/R-6016245-1480909922-6423.jpg", codigo: "JY001"},
+            {id: 62, nombre: "Full Moon", artista: "Junko Yagami", genero: "City Pop", anio: "1985", num_canciones: "10", info_relevante: "Misma imagen que la anterior (duplicado)", precio: 32.99, imagen: "/images/albums/R-6016245-1480909922-6423 (2).jpg", codigo: "JY002"},
+            {id: 63, nombre: "Parental Advisory", artista: "Varios Artistas", genero: "Hip-Hop", anio: "2000", num_canciones: "15", info_relevante: "Recopilatorio genérico con advisory", precio: 25.99, imagen: "/images/albums/R-6677977-1528661519-1537.jpg", codigo: "VAR002"},
+            {id: 64, nombre: "Project DIVA Arcade", artista: "Sega / Project DIVA", genero: "Video Game", anio: "1999", num_canciones: "20", info_relevante: "Banda sonora del juego de ritmo", precio: 36.99, imagen: "/images/albums/R-11395952-1515574611-5549.jpg", codigo: "PDA001"},
+            {id: 65, nombre: "Sonic Adventure 2", artista: "Sega", genero: "Video Game", anio: "2001", num_canciones: "30", info_relevante: "Banda sonora de Sonic Adventure 2", precio: 38.99, imagen: "/images/albums/R-11785167-1522342101-1763.jpg", codigo: "SA2001"},
+            {id: 66, nombre: "Sonic Mania Plus", artista: "Sega", genero: "Video Game", anio: "2017", num_canciones: "25", info_relevante: "Banda sonora de Sonic Mania Plus", precio: 39.99, imagen: "/images/albums/R-12313098-1532721117-4955.jpg", codigo: "SMP001"},
+            {id: 67, nombre: "Sonic Adventure", artista: "Sega", genero: "Video Game", anio: "1991", num_canciones: "25", info_relevante: "Banda sonora del Sonic Adventure original", precio: 37.99, imagen: "/images/albums/R-15556480-1593555412-8987.jpg", codigo: "SA1991"},
+            {id: 68, nombre: "Guilty Gear", artista: "Arc System Works", genero: "Video Game", anio: "1998", num_canciones: "15", info_relevante: "Banda sonora del juego de lucha", precio: 34.99, imagen: "/images/albums/R-15714293-1596439452-6574.jpg", codigo: "GG001"},
+            {id: 69, nombre: "Guilty Gear 2", artista: "Arc System Works", genero: "Video Game", anio: "2000", num_canciones: "20", info_relevante: "Songaccord #2 con Continuum Shift II", precio: 35.99, imagen: "/images/albums/R-17757319-1615251054-2628.jpg", codigo: "GG002"},
+            {id: 70, nombre: "Guilty Gear '98", artista: "Arc System Works", genero: "Video Game", anio: "1998", num_canciones: "15", info_relevante: "Banda sonora de Guilty Gear de 1998", precio: 33.99, imagen: "/images/albums/R-18267286-1752419814-2856.jpg", codigo: "GG003"},
+            
+            // ROCK CLÁSICO
+            {id: 71, nombre: "Trastormo Gpear", artista: "Desconocido", genero: "Desconocido", anio: "2000", num_canciones: "10", info_relevante: "Texto confuso, posible bootleg", precio: 22.99, imagen: "/images/albums/R-18026467-1616863072-8056.jpg", codigo: "UNK002"},
+            {id: 72, nombre: "EPICGAME BLIZZARDZZ", artista: "Desconocido", genero: "Desconocido", anio: "2000", num_canciones: "15", info_relevante: "Posible recopilatorio de Blizzard", precio: 24.99, imagen: "/images/albums/R-19452658-1640428739-2313.jpg", codigo: "UNK003"},
+            {id: 73, nombre: "HALLE New World Editio", artista: "Desconocido", genero: "Desconocido", anio: "2000", num_canciones: "12", info_relevante: "Texto con error tipográfico", precio: 26.99, imagen: "/images/albums/R-20370202-1632619034-5254.jpg", codigo: "UNK004"},
+            {id: 74, nombre: "Sonic CD 20th Anniversary", artista: "Sega", genero: "Video Game", anio: "2011", num_canciones: "25", info_relevante: "Edición aniversario de Sonic CD", precio: 37.99, imagen: "/images/albums/R-28476628-1696267851-3802.jpg", codigo: "SA2011"},
+            {id: 75, nombre: "GOE9 WALENCE AND BRAE", artista: "Desconocido", genero: "Desconocido", anio: "2000", num_canciones: "15", info_relevante: "Texto difícil de identificar", precio: 23.99, imagen: "/images/albums/R-31016191-1718930179-3655.jpg", codigo: "UNK005"},
+            {id: 76, nombre: "PAG PersoriaZ GOLDEN", artista: "Atlus", genero: "Video Game", anio: "2012", num_canciones: "30", info_relevante: "Persona 4 Golden con error tipográfico", precio: 38.99, imagen: "/images/albums/R-31086809-1719637801-1477.jpg", codigo: "P4G001"},
+            {id: 77, nombre: "Guilty Gear Strive", artista: "Arc System Works", genero: "Video Game", anio: "2021", num_canciones: "25", info_relevante: "Banda sonora de Guilty Gear Strive", precio: 39.99, imagen: "/images/albums/R-33638781-1744123643-7272.jpg", codigo: "GG004"},
+            {id: 78, nombre: "Persona 3 Megamix", artista: "Atlus", genero: "Video Game", anio: "2009", num_canciones: "20", info_relevante: "Remix o recopilatorio de Persona 3", precio: 36.99, imagen: "/images/albums/R-33747939-1766436777-4102.jpg", codigo: "P3M001"},
+            {id: 79, nombre: "Ride the Lightning", artista: "Metallica", genero: "Heavy Metal", anio: "1984", num_canciones: "8", info_relevante: "Portada con silla eléctrica y rayos", precio: 30.99, imagen: "/images/albums/R-28790401-1699031518-2561.jpg", codigo: "MTL005"},
+            {id: 80, nombre: "Kill 'Em All", artista: "Metallica", genero: "Heavy Metal", anio: "1983", num_canciones: "10", info_relevante: "Debut thrash metal", precio: 29.99, imagen: "/images/albums/R-28476628-1696267851-3802.jpg", codigo: "MTL006"},
+            
+            // HIP-HOP
+            {id: 6, nombre: "Straight Outta Compton", artista: "N.W.A.", genero: "Hip-Hop", anio: "1988", num_canciones: "13", info_relevante: "El álbum que definió el gangsta rap", precio: 32.99, imagen: "/images/albums/R-1189666-1677492391-7725.jpg", codigo: "NWA001"},
+            {id: 7, nombre: "Ready to Die", artista: "The Notorious B.I.G.", genero: "Hip-Hop", anio: "1994", num_canciones: "17", info_relevante: "Debut del legendario rapero", precio: 31.99, imagen: "/images/albums/R-1218217-1201488186.jpg", codigo: "BIG001"},
+            {id: 8, nombre: "Illmatic", artista: "Nas", genero: "Hip-Hop", anio: "1994", num_canciones: "10", info_relevante: "Considerado uno de los mejores álbumes", precio: 28.99, imagen: "/images/albums/R-12313098-1532721117-4955.jpg", codigo: "NAS001"},
+            {id: 9, nombre: "Enter the Wu-Tang", artista: "Wu-Tang Clan", genero: "Hip-Hop", anio: "1993", num_canciones: "12", info_relevante: "Debut del clan Shaolin", precio: 30.99, imagen: "/images/albums/R-124187-1349004315-5948.jpg", codigo: "WTC001"},
+            {id: 10, nombre: "2001", artista: "Dr. Dre", genero: "Hip-Hop", anio: "1999", num_canciones: "22", info_relevante: "El álbum que definió el West Coast", precio: 33.99, imagen: "/images/albums/R-1259481-1753529952-8160.jpg", codigo: "DRE001"},
+            
+            // POP
+            {id: 11, nombre: "Thriller", artista: "Michael Jackson", genero: "Pop", anio: "1982", num_canciones: "9", info_relevante: "El álbum más vendido de todos los tiempos", precio: 29.99, imagen: "/images/albums/R-1266804-1461290216-7010.jpg", codigo: "MJ001"},
+            {id: 12, nombre: "Songs From The Big Chair", artista: "Tears For Fears", genero: "Pop", anio: "1985", num_canciones: "8", info_relevante: "Incluye Shout y Everybody Wants to Rule the World", precio: 24.99, imagen: "/images/albums/R-1298710-1207557645.jpg", codigo: "TFC001"},
+            {id: 13, nombre: "Like a Prayer", artista: "Madonna", genero: "Pop", anio: "1989", num_canciones: "11", info_relevante: "Uno de los álbumes más icónicos de los 80s", precio: 26.99, imagen: "/images/albums/R-1302358-1283657756.jpg", codigo: "MAD001"},
+            {id: 14, nombre: "Back to Black", artista: "Amy Winehouse", genero: "Pop", anio: "2006", num_canciones: "11", info_relevante: "El último álbum de la artista", precio: 28.99, imagen: "/images/albums/R-133639-1385123943-6958.jpg", codigo: "AW001"},
+            {id: 15, nombre: "21", artista: "Adele", genero: "Pop", anio: "2011", num_canciones: "11", info_relevante: "Álbum con Rolling in the Deep", precio: 31.99, imagen: "/images/albums/R-1336566-1418858341-9523.jpg", codigo: "ADL001"},
+            
+            // VIDEO GAMES
+            {id: 16, nombre: "Persona 5 Original Soundtrack", artista: "Shoji Meguro", genero: "Video Game", anio: "2016", num_canciones: "110", info_relevante: "Banda sonora del JRPG de Atlus", precio: 39.99, imagen: "/images/albums/R-1466299-1645541414-2494.jpg", codigo: "P5001"},
+            {id: 17, nombre: "Persona 3 Original Soundtrack", artista: "Shoji Meguro", genero: "Video Game", anio: "2006", num_canciones: "120", info_relevante: "Banda sonora que definió el estilo", precio: 37.99, imagen: "/images/albums/R-1516047-1225415229.jpg", codigo: "P3001"},
+            {id: 18, nombre: "Final Fantasy VII OST", artista: "Nobuo Uematsu", genero: "Video Game", anio: "1997", num_canciones: "85", info_relevante: "Banda sonora del clásico de Square", precio: 34.99, imagen: "/images/albums/R-1518489-1384965210-2517.jpg", codigo: "FF7001"},
+            {id: 19, nombre: "The Legend of Zelda OOT", artista: "Koji Kondo", genero: "Video Game", anio: "1998", num_canciones: "50", info_relevante: "Banda sonora del clásico de N64", precio: 32.99, imagen: "/images/albums/R-1538759-1579910245-4930.jpg", codigo: "ZEL001"},
+            {id: 20, nombre: "Halo Original Soundtrack", artista: "Martin O'Donnell", genero: "Video Game", anio: "2002", num_canciones: "26", info_relevante: "Banda sonora épica de Xbox", precio: 29.99, imagen: "/images/albums/R-1549636-1753531247-4909.jpg", codigo: "HAL001"},
+            
+            // MÁS ROCK Y METAL
+            {id: 21, nombre: "Black Album", artista: "Metallica", genero: "Heavy Metal", anio: "1991", num_canciones: "12", info_relevante: "El álbum más comercial de Metallica", precio: 33.99, imagen: "/images/albums/R-15556480-1593555412-8987.jpg", codigo: "MTL002"},
+            {id: 22, nombre: "Paranoid", artista: "Black Sabbath", genero: "Heavy Metal", anio: "1970", num_canciones: "8", info_relevante: "Álbum que definió el heavy metal", precio: 28.99, imagen: "/images/albums/R-1568081-1693418003-9430.jpg", codigo: "BS001"},
+            {id: 23, nombre: "Number of the Beast", artista: "Iron Maiden", genero: "Heavy Metal", anio: "1982", num_canciones: "8", info_relevante: "Clásico del heavy metal británico", precio: 30.99, imagen: "/images/albums/R-15714293-1596439452-6574.jpg", codigo: "IM001"},
+            {id: 24, nombre: "Rust in Peace", artista: "Megadeth", genero: "Heavy Metal", anio: "1990", num_canciones: "9", info_relevante: "Thrash metal técnico y rápido", precio: 31.99, imagen: "/images/albums/R-1584030-1471796155-6051.jpg", codigo: "MD001"},
+            {id: 25, nombre: "Reign in Blood", artista: "Slayer", genero: "Heavy Metal", anio: "1986", num_canciones: "10", info_relevante: "Thrash metal extremo", precio: 29.99, imagen: "/images/albums/R-1612292-1757270286-9921.jpg", codigo: "SLY001"},
+            
+            // MÁS HIP-HOP URBANO
+            {id: 26, nombre: "The Chronic", artista: "Dr. Dre", genero: "Hip-Hop", anio: "1992", num_canciones: "16", info_relevante: "El álbum que popularizó el G-funk", precio: 32.99, imagen: "/images/albums/R-1644762-1267552273.jpg", codigo: "DRE002"},
+            {id: 27, nombre: "All Eyez on Me", artista: "2Pac", genero: "Hip-Hop", anio: "1996", num_canciones: "27", info_relevante: "Doble álbum póstumo", precio: 35.99, imagen: "/images/albums/R-1644766-1302067695.jpg", codigo: "TUP001"},
+            {id: 28, nombre: "The Marshall Mathers LP", artista: "Eminem", genero: "Hip-Hop", anio: "2000", num_canciones: "18", info_relevante: "El álbum más personal de Eminem", precio: 33.99, imagen: "/images/albums/R-176346-1571810543-9832.jpg", codigo: "EMM001"},
+            {id: 29, nombre: "The Blueprint", artista: "Jay-Z", genero: "Hip-Hop", anio: "2001", num_canciones: "13", info_relevante: "Producción de Kanye West", precio: 31.99, imagen: "/images/albums/R-17757319-1615251054-2628.jpg", codigo: "JZ001"},
+            {id: 30, nombre: "Get Rich or Die Tryin'", artista: "50 Cent", genero: "Hip-Hop", anio: "2003", num_canciones: "18", info_relevante: "Debut del rapero de Queens", precio: 30.99, imagen: "/images/albums/R-18026467-1616863072-8056.jpg", codigo: "50C001"},
+            
+            // POP Y DANCE
+            {id: 31, nombre: "True Blue", artista: "Madonna", genero: "Pop", anio: "1986", num_canciones: "9", info_relevante: "El álbum más exitoso de Madonna", precio: 27.99, imagen: "/images/albums/R-1813006-1436814762-9681.jpg", codigo: "MAD002"},
+            {id: 32, nombre: "The Fame", artista: "Lady Gaga", genero: "Pop", anio: "2008", num_canciones: "13", info_relevante: "Debut que revolucionó el pop", precio: 29.99, imagen: "/images/albums/R-18267286-1752419814-2856.jpg", codigo: "LG001"},
+            {id: 33, nombre: "Random Access Memories", artista: "Daft Punk", genero: "Disco", anio: "2013", num_canciones: "13", info_relevante: "Regreso con sonido disco-funk", precio: 36.99, imagen: "/images/albums/R-1839842-1590153593-6177.jpg", codigo: "DP001"},
+            {id: 34, nombre: "Discovery", artista: "Daft Punk", genero: "Disco", anio: "2001", num_canciones: "14", info_relevante: "One More Time y Around the World", precio: 32.99, imagen: "/images/albums/R-1877510-1479939094-7376.jpg", codigo: "DP002"},
+            {id: 35, nombre: "Confessions on a Dance Floor", artista: "Madonna", genero: "Disco", anio: "2005", num_canciones: "12", info_relevante: "Regreso de Madonna al dance", precio: 30.99, imagen: "/images/albums/R-1894895-1731589466-1561.jpg", codigo: "MAD003"},
+            
+            // ROCK ALTERNATIVO
+            {id: 36, nombre: "OK Computer", artista: "Radiohead", genero: "Rock", anio: "1997", num_canciones: "12", info_relevante: "Álbum conceptual sobre la alienación", precio: 33.99, imagen: "/images/albums/R-1894922-1732909405-2331.jpg", codigo: "RH001"},
+            {id: 37, nombre: "The Bends", artista: "Radiohead", genero: "Rock", anio: "1995", num_canciones: "12", info_relevante: "El álbum que consolidó a Radiohead", precio: 31.99, imagen: "/images/albums/R-1910493-1475321463-3302.jpg", codigo: "RH002"},
+            {id: 38, nombre: "Siamese Dream", artista: "The Smashing Pumpkins", genero: "Rock", anio: "1993", num_canciones: "13", info_relevante: "Rock alternativo de los 90s", precio: 29.99, imagen: "/images/albums/R-19452658-1640428739-2313.jpg", codigo: "SP001"},
+            {id: 39, nombre: "Mellon Collie", artista: "The Smashing Pumpkins", genero: "Rock", anio: "1995", num_canciones: "28", info_relevante: "Doble álbum ambicioso", precio: 35.99, imagen: "/images/albums/R-20370202-1632619034-5254.jpg", codigo: "SP002"},
+            {id: 40, nombre: "Ten", artista: "Pearl Jam", genero: "Rock", anio: "1991", num_canciones: "11", info_relevante: "Clásico del grunge", precio: 30.99, imagen: "/images/albums/R-2048352-1428937529-6793.jpg", codigo: "PJ001"},
+            
+            // MÁS ÁLBUMES PARA USAR TODAS LAS IMÁGENES
+            {id: 41, nombre: "Vs.", artista: "Pearl Jam", genero: "Rock", anio: "1993", num_canciones: "12", info_relevante: "Segundo álbum de Pearl Jam", precio: 29.99, imagen: "/images/albums/R-21145318-1638040897-7085.jpg", codigo: "PJ002"},
+            {id: 42, nombre: "Vitalogy", artista: "Pearl Jam", genero: "Rock", anio: "1994", num_canciones: "13", info_relevante: "Tercer álbum experimental", precio: 31.99, imagen: "/images/albums/R-2142533-1504547351-9016.jpg", codigo: "PJ003"},
+            {id: 43, nombre: "No Code", artista: "Pearl Jam", genero: "Rock", anio: "1996", num_canciones: "13", info_relevante: "Álbum más experimental", precio: 30.99, imagen: "/images/albums/R-2194798-1455458158-4705.jpg", codigo: "PJ004"},
+            {id: 44, nombre: "Yield", artista: "Pearl Jam", genero: "Rock", anio: "1998", num_canciones: "13", info_relevante: "Regreso al rock directo", precio: 29.99, imagen: "/images/albums/R-2206780-1560358783-9788.jpg", codigo: "PJ005"},
+            {id: 45, nombre: "Binaural", artista: "Pearl Jam", genero: "Rock", anio: "2000", num_canciones: "13", info_relevante: "Sonido experimental", precio: 32.99, imagen: "/images/albums/R-22070980-1644288573-6133.jpg", codigo: "PJ006"},
+            {id: 46, nombre: "Riot Act", artista: "Pearl Jam", genero: "Rock", anio: "2002", num_canciones: "15", info_relevante: "Álbum político", precio: 31.99, imagen: "/images/albums/R-226082-1691001549-9816.jpg", codigo: "PJ007"},
+            {id: 47, nombre: "Pearl Jam", artista: "Pearl Jam", genero: "Rock", anio: "2006", num_canciones: "13", info_relevante: "Álbum homónimo", precio: 30.99, imagen: "/images/albums/R-226365-1154450517.jpg", codigo: "PJ008"},
+            {id: 48, nombre: "Backspacer", artista: "Pearl Jam", genero: "Rock", anio: "2009", num_canciones: "11", info_relevante: "Sonido más pop", precio: 29.99, imagen: "/images/albums/R-2267318-1524268802-8916.jpg", codigo: "PJ009"},
+            {id: 49, nombre: "Lightning Bolt", artista: "Pearl Jam", genero: "Rock", anio: "2013", num_canciones: "12", info_relevante: "Regreso energético", precio: 32.99, imagen: "/images/albums/R-2360332-1683236487-9461.jpg", codigo: "PJ010"},
+            {id: 50, nombre: "Gigaton", artista: "Pearl Jam", genero: "Rock", anio: "2020", num_canciones: "12", info_relevante: "Último álbum hasta ahora", precio: 33.99, imagen: "/images/albums/R-238369-1650818330-8599.jpg", codigo: "PJ011"},
+            
+            // NIRVANA Y GRUNGE
+            {id: 51, nombre: "Bleach", artista: "Nirvana", genero: "Rock", anio: "1989", num_canciones: "13", info_relevante: "Debut crudo de Nirvana", precio: 28.99, imagen: "/images/albums/R-258882-1425707940-8805.jpg", codigo: "NV002"},
+            {id: 52, nombre: "In Utero", artista: "Nirvana", genero: "Rock", anio: "1993", num_canciones: "12", info_relevante: "Último álbum de estudio", precio: 30.99, imagen: "/images/albums/R-2607424-1630601087-1199.jpg", codigo: "NV003"},
+            {id: 53, nombre: "From the Muddy Banks", artista: "Nirvana", genero: "Rock", anio: "1994", num_canciones: "17", info_relevante: "Álbum en vivo", precio: 31.99, imagen: "/images/albums/R-26193-1313909388.jpg", codigo: "NV004"},
+            {id: 54, nombre: "With the Lights Out", artista: "Nirvana", genero: "Rock", anio: "2004", num_canciones: "68", info_relevante: "Box set con rarezas", precio: 45.99, imagen: "/images/albums/R-26194-1592430767-5429.jpg", codigo: "NV005"},
+            
+            // METALLICA COMPLETO
+            {id: 55, nombre: "Kill 'Em All", artista: "Metallica", genero: "Heavy Metal", anio: "1983", num_canciones: "10", info_relevante: "Debut thrash metal", precio: 29.99, imagen: "/images/albums/R-28476628-1696267851-3802.jpg", codigo: "MTL003"},
+            {id: 56, nombre: "Ride the Lightning", artista: "Metallica", genero: "Heavy Metal", anio: "1984", num_canciones: "8", info_relevante: "Evolución del thrash", precio: 30.99, imagen: "/images/albums/R-28790401-1699031518-2561.jpg", codigo: "MTL004"},
+            {id: 57, nombre: "...And Justice for All", artista: "Metallica", genero: "Heavy Metal", anio: "1988", num_canciones: "9", info_relevante: "Thrash metal progresivo", precio: 31.99, imagen: "/images/albums/R-2911293-1594245812-7931.jpg", codigo: "MTL005"},
+            {id: 58, nombre: "Load", artista: "Metallica", genero: "Heavy Metal", anio: "1996", num_canciones: "14", info_relevante: "Cambio a hard rock", precio: 32.99, imagen: "/images/albums/R-3065425-1374964615-4323.jpg", codigo: "MTL006"},
+            {id: 59, nombre: "Reload", artista: "Metallica", genero: "Heavy Metal", anio: "1997", num_canciones: "13", info_relevante: "Continuación de Load", precio: 31.99, imagen: "/images/albums/R-3065452-1692917820-8386.jpg", codigo: "MTL007"},
+            {id: 60, nombre: "St. Anger", artista: "Metallica", genero: "Heavy Metal", anio: "2003", num_canciones: "11", info_relevante: "Sonido nu metal", precio: 30.99, imagen: "/images/albums/R-31016191-1718930179-3655.jpg", codigo: "MTL008"},
+            {id: 61, nombre: "Death Magnetic", artista: "Metallica", genero: "Heavy Metal", anio: "2008", num_canciones: "10", info_relevante: "Regreso al thrash", precio: 33.99, imagen: "/images/albums/R-31086809-1719637801-1477.jpg", codigo: "MTL009"},
+            {id: 62, nombre: "Hardwired to Self-Destruct", artista: "Metallica", genero: "Heavy Metal", anio: "2016", num_canciones: "12", info_relevante: "Primer álbum en 8 años", precio: 35.99, imagen: "/images/albums/R-31232716-1721092022-2866.jpg", codigo: "MTL010"},
+            
+            // MÁS HIP-HOP CLÁSICO
+            {id: 63, nombre: "Paid in Full", artista: "Eric B. & Rakim", genero: "Hip-Hop", anio: "1987", num_canciones: "10", info_relevante: "Hip-hop innovador", precio: 29.99, imagen: "/images/albums/R-3201905-1650555602-9097.jpg", codigo: "EBR001"},
+            {id: 64, nombre: "Criminal Minded", artista: "Boogie Down Productions", genero: "Hip-Hop", anio: "1987", num_canciones: "10", info_relevante: "Hip-hop consciente", precio: 28.99, imagen: "/images/albums/R-3326401-1735917953-5073.jpg", codigo: "BDP001"},
+            {id: 65, nombre: "It Takes a Nation", artista: "Public Enemy", genero: "Hip-Hop", anio: "1988", num_canciones: "13", info_relevante: "Hip-hop político", precio: 30.99, imagen: "/images/albums/R-33638781-1744123643-7272.jpg", codigo: "PE001"},
+            {id: 66, nombre: "Low End Theory", artista: "A Tribe Called Quest", genero: "Hip-Hop", anio: "1991", num_canciones: "14", info_relevante: "Hip-hop jazz", precio: 31.99, imagen: "/images/albums/R-33747939-1766436777-4102.jpg", codigo: "ATCQ001"},
+            {id: 67, nombre: "Mecca and the Soul Brother", artista: "Pete Rock & CL Smooth", genero: "Hip-Hop", anio: "1992", num_canciones: "16", info_relevante: "Hip-hop soul", precio: 32.99, imagen: "/images/albums/R-3465422-1368969705-3242.jpg", codigo: "PRS001"},
+            {id: 68, nombre: "Midnight Marauders", artista: "A Tribe Called Quest", genero: "Hip-Hop", anio: "1993", num_canciones: "14", info_relevante: "Clásico del hip-hop alternativo", precio: 33.99, imagen: "/images/albums/R-367301-1610560614-8573.jpg", codigo: "ATCQ002"},
+            {id: 69, nombre: "Doggystyle", artista: "Snoop Dogg", genero: "Hip-Hop", anio: "1993", num_canciones: "17", info_relevante: "Debut de Snoop Dogg", precio: 31.99, imagen: "/images/albums/R-367339-1615037762-7659.jpg", codigo: "SD001"},
+            {id: 70, nombre: "Ready to Die", artista: "The Notorious B.I.G.", genero: "Hip-Hop", anio: "1994", num_canciones: "17", info_relevante: "Debut legendario", precio: 32.99, imagen: "/images/albums/R-367548-1488165844-3409.jpg", codigo: "BIG002"},
+            {id: 71, nombre: "Life After Death", artista: "The Notorious B.I.G.", genero: "Hip-Hop", anio: "1997", num_canciones: "25", info_relevante: "Álbum póstumo doble", precio: 35.99, imagen: "/images/albums/R-367664-1408907054-7204.jpg", codigo: "BIG003"},
+            {id: 72, nombre: "Aquemini", artista: "OutKast", genero: "Hip-Hop", anio: "1998", num_canciones: "16", info_relevante: "Hip-hop experimental del sur", precio: 34.99, imagen: "/images/albums/R-369408-1245380540.jpg", codigo: "OK001"},
+            {id: 73, nombre: "Stankonia", artista: "OutKast", genero: "Hip-Hop", anio: "2000", num_canciones: "24", info_relevante: "Funk y hip-hop fusión", precio: 33.99, imagen: "/images/albums/R-372153-1510939356-6599.jpg", codigo: "OK002"},
+            {id: 74, nombre: "Speakerboxxx", artista: "OutKast", genero: "Hip-Hop", anio: "2003", num_canciones: "20", info_relevante: "Doble álbum conceptual", precio: 35.99, imagen: "/images/albums/R-3724657-1428004066-3251.jpg", codigo: "OK003"},
+            {id: 75, nombre: "The College Dropout", artista: "Kanye West", genero: "Hip-Hop", anio: "2004", num_canciones: "21", info_relevante: "Debut revolucionario", precio: 34.99, imagen: "/images/albums/R-375979-1491700347-7263.jpg", codigo: "KW001"},
+            {id: 76, nombre: "Late Registration", artista: "Kanye West", genero: "Hip-Hop", anio: "2005", num_canciones: "21", info_relevante: "Hip-hop con orquesta", precio: 33.99, imagen: "/images/albums/R-376927-1390241414-9337.jpg", codigo: "KW002"},
+            {id: 77, nombre: "Graduation", artista: "Kanye West", genero: "Hip-Hop", anio: "2007", num_canciones: "13", info_relevante: "Electro-hop y samples", precio: 32.99, imagen: "/images/albums/R-377464-1753530613-1176.jpg", codigo: "KW003"},
+            {id: 78, nombre: "808s & Heartbreak", artista: "Kanye West", genero: "Hip-Hop", anio: "2008", num_canciones: "12", info_relevante: "Auto-tune emocional", precio: 31.99, imagen: "/images/albums/R-377521-1750781634-7948.jpg", codigo: "KW004"},
+            {id: 79, nombre: "My Beautiful Dark Twisted", artista: "Kanye West", genero: "Hip-Hop", anio: "2010", num_canciones: "13", info_relevante: "Hip-hop maximalista", precio: 33.99, imagen: "/images/albums/R-377569-1401732089-7983.jpg", codigo: "KW005"},
+            {id: 80, nombre: "Watch the Throne", artista: "Jay-Z & Kanye West", genero: "Hip-Hop", anio: "2011", num_canciones: "12", info_relevante: "Colaboración épica", precio: 35.99, imagen: "/images/albums/R-379025-1384964856-3772.jpg", codigo: "JK001"}
+          ];
+          console.log('📦 Cargados productos desde datos locales');
+          }
+          loading.classList.add('hidden');
+
+          if (!allProducts.length) {
+            empty.classList.remove('hidden');
+            return;
+          }
+
+          wrap.classList.remove('hidden');
+          const genres = getGenres();
+          genreTabsEl.innerHTML = genres.map(g => {
+            const label = g === '' ? 'Todos' : g;
+            return `<button type="button" class="genre-tab ${g === '' ? 'active' : ''}" data-genre="${escapeHtml(g)}">${escapeHtml(label)}</button>`;
+          }).join('');
+
+          genreTabsEl.querySelectorAll('.genre-tab').forEach(tab => {
+            tab.addEventListener('click', () => filterByGenre(tab.dataset.genre));
+          });
+
+          filterByGenre('');
+        } catch (e) {
+          loading.classList.add('hidden');
+          if (e.status === 401) {
+            empty.classList.remove('hidden');
+            empty.innerHTML = 'Sesión expirada. <a href="/login.html" class="underline">Iniciar sesión</a>';
+          } else {
+            errEl.classList.remove('hidden');
+            errEl.textContent = e.message || 'Error al cargar productos';
+          }
+        }
+      }
+
+      init();
+      
+      // Sistema de partículas Persona 5
+      function createParticles() {
+        const container = document.getElementById('particles');
+        if (!container) return;
+        
+        for (let i = 0; i < 20; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.style.left = Math.random() * 100 + '%';
+          particle.style.animationDelay = Math.random() * 8 + 's';
+          particle.style.animationDuration = (8 + Math.random() * 4) + 's';
+          container.appendChild(particle);
+        }
+      }
+      
+      createParticles();
+      
+      // Actualizar partículas al cambiar de género
+      function updateParticlesByGenre(genre) {
+        const particles = document.querySelectorAll('.particle');
+        const accentColor = getComputedStyle(document.body).getPropertyValue('--accent') || 'var(--neon-cyan)';
+        particles.forEach(particle => {
+          particle.style.background = accentColor;
+        });
+      }
+      
+      // Llamar a updateParticlesByGenre cuando cambie el género
+      const originalFilterByGenre = filterByGenre;
+      filterByGenre = function(genre) {
+        originalFilterByGenre(genre);
+        setTimeout(() => updateParticlesByGenre(genre), 100);
+      };
+    })();
+  </script>
+</body>
+</html>

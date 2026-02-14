@@ -1,0 +1,29 @@
+{
+  "name": "tienda-discos-api",
+  "version": "1.0.0",
+  "description": "API REST para tienda de discos con autenticación JWT y PostgreSQL",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "db:create": "node scripts/crear_tablas_render.js",
+    "db:seed": "node scripts/seed_render_free.js",
+    "db:insert": "node scripts/insertar_productos_render.js"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "stripe": "^14.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

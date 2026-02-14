@@ -1,0 +1,437 @@
+/* ========== Estética: cyberpunk + urban + nu metal / heavy ========== */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --glass-bg: rgba(0, 0, 0, 0.35);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --blur: 14px;
+  --neon-cyan: #00f5ff;
+  --neon-magenta: #ff00aa;
+  --neon-green: #39ff14;
+  --metal-red: #cc0000;
+  --urban-orange: #ff6b35;
+  --bg-dark: #0a0a0f;
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Rajdhani', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+}
+
+/* Tema por género (data-theme en body o .genre-section) */
+[data-theme="Heavy Metal"],
+[data-theme="Metal"] {
+  --accent: var(--metal-red);
+  --accent-glow: rgba(204, 0, 0, 0.5);
+  --font-display: 'Orbitron', sans-serif;
+  --bg-pattern: radial-gradient(circle at 20% 80%, rgba(204, 0, 0, 0.1) 0%, transparent 50%);
+}
+
+[data-theme="Video Game"] {
+  --accent: var(--neon-cyan);
+  --accent-glow: rgba(0, 245, 255, 0.4);
+  --bg-pattern: linear-gradient(45deg, rgba(0, 245, 255, 0.05) 25%, transparent 25%, transparent 50%, rgba(0, 245, 255, 0.05) 50%, rgba(0, 245, 255, 0.05) 75%, transparent 75%, transparent);
+  background-size: 20px 20px;
+}
+
+[data-theme="Hip-Hop"],
+[data-theme="Urban"] {
+  --accent: var(--urban-orange);
+  --accent-glow: rgba(255, 107, 53, 0.4);
+  --font-display: 'Rajdhani', sans-serif;
+  --font-body: 'Rajdhani', sans-serif;
+  --bg-pattern: 
+    repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 107, 53, 0.03) 10px, rgba(255, 107, 53, 0.03) 20px),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50' y='50' font-family='Arial' font-size='80' fill='rgba(255,107,53,0.05)' text-anchor='middle' dominant-baseline='middle'%3E%26%3C/text%3E%3C/svg%3E");
+}
+
+[data-theme="City Pop"],
+[data-theme="J-Pop"] {
+  --accent: var(--neon-magenta);
+  --accent-glow: rgba(255, 0, 170, 0.35);
+  --bg-pattern: radial-gradient(ellipse 60% 40% at 50% 50%, rgba(255, 0, 170, 0.08) 0%, transparent 70%);
+}
+
+[data-theme="Disco"],
+[data-theme="Pop"] {
+  --accent: #ffd700;
+  --accent-glow: rgba(255, 215, 0, 0.35);
+  --bg-pattern: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 215, 0, 0.05) 0deg, transparent 60deg, rgba(255, 215, 0, 0.05) 120deg, transparent 180deg);
+}
+
+[data-theme="Rock"] {
+  --accent: var(--neon-green);
+  --accent-glow: rgba(57, 255, 20, 0.35);
+  --bg-pattern: repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(57, 255, 20, 0.05) 20px, rgba(57, 255, 20, 0.05) 40px);
+}
+
+[data-theme="Heavy Metal"] {
+  --accent: var(--metal-red);
+  --accent-glow: rgba(204, 0, 0, 0.5);
+  --font-display: 'Orbitron', sans-serif;
+  --bg-pattern: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(204, 0, 0, 0.05) 10px, rgba(204, 0, 0, 0.05) 20px);
+}
+
+[data-theme="R&B"] {
+  --accent: #e91e63;
+  --accent-glow: rgba(233, 30, 99, 0.35);
+  --bg-pattern: radial-gradient(circle at 80% 20%, rgba(233, 30, 99, 0.08) 0%, transparent 60%);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg-dark);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 245, 255, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(255, 0, 170, 0.06), transparent),
+    linear-gradient(180deg, #0a0a0f 0%, #12121a 50%, #0d0d12 100%),
+    var(--bg-pattern, none);
+  background-attachment: fixed;
+  font-family: var(--font-body);
+  transition: background 0.5s ease;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 1rem;
+}
+
+.glass-card {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* ========== Album card: tilt 3D + glow (Persona 5 style) ========== */
+.album-card {
+  position: relative;
+  transform-style: preserve-3d;
+  perspective: 800px;
+  transition: transform 0.35s ease, box-shadow 0.35s ease, filter 0.3s ease;
+  cursor: pointer;
+}
+
+.album-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, var(--accent, var(--neon-cyan)), transparent, var(--accent, var(--neon-magenta)));
+  border-radius: 1rem;
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+  filter: blur(8px);
+}
+
+.album-card:hover::before {
+  opacity: 0.7;
+  animation: borderGlow 2s ease-in-out infinite;
+}
+
+@keyframes borderGlow {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.05); }
+}
+
+.album-card:hover {
+  transform: translateY(-8px) scale(1.03) rotateX(var(--rotate-x, 0deg)) rotateY(var(--rotate-y, 0deg));
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 40px var(--accent-glow, rgba(0, 245, 255, 0.2));
+  filter: brightness(1.1);
+}
+
+.album-card .album-cover-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  aspect-ratio: 1;
+  background: linear-gradient(145deg, #1a1a24, #0f0f14);
+}
+
+.album-card .album-cover-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.album-card .album-cover-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.album-card:hover .album-cover-wrap img {
+  transform: scale(1.08);
+}
+
+
+/* Efecto de brillo que sigue al ratón (se aplica por JS) */
+.album-card .shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.15),
+    transparent 40%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.album-card:hover .shine {
+  opacity: 1;
+}
+
+/* Efecto glow adicional para las tarjetas */
+.album-card .album-glow {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(45deg, var(--accent, var(--neon-cyan)), transparent, var(--accent, var(--neon-magenta)));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.album-card:hover .album-glow {
+  opacity: 0.6;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+/* ========== Genre tabs ========== */
+.genre-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.genre-tab {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.genre-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.genre-tab.active {
+  background: var(--accent, var(--neon-cyan));
+  color: #000;
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--accent-glow, rgba(0, 245, 255, 0.3));
+}
+
+/* ========== Botón YouTube ========== */
+.btn-youtube {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 0, 0, 0.25);
+  color: #fff;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-youtube:hover {
+  background: rgba(255, 0, 0, 0.5);
+  border-color: #ff0000;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+/* ========== Spinner ========== */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--neon-cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========== Elementos de grafiti para Hip-Hop ========== */
+.graffiti-tag {
+  position: fixed;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 2rem;
+  color: var(--accent, var(--urban-orange));
+  text-shadow: 
+    2px 2px 0px rgba(0, 0, 0, 0.8),
+    4px 4px 0px rgba(255, 107, 53, 0.3),
+    6px 6px 0px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  animation: graffitiFadeIn 1s ease-out forwards;
+  animation-delay: 0.5s;
+}
+
+@keyframes graffitiFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(var(--rotation, 0deg));
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1) rotate(var(--rotation, 0deg));
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1) rotate(var(--rotation, 0deg));
+  }
+}
+
+/* Mostrar grafitis solo en Hip-Hop */
+[data-theme="Hip-Hop"] .graffiti-tag,
+[data-theme="Urban"] .graffiti-tag {
+  opacity: 0.6 !important;
+}
+
+/* ========== Efectos de partículas y animaciones Persona 5 ========== */
+.particle-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--accent, var(--neon-cyan));
+  border-radius: 50%;
+  opacity: 0;
+  animation: floatParticle 8s ease-in-out infinite;
+}
+
+@keyframes floatParticle {
+  0% {
+    opacity: 0;
+    transform: translateY(100vh) scale(0);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(90vh) scale(1);
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(10vh) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0) scale(0);
+  }
+}
+
+/* Animaciones de entrada tipo Persona 5 */
+@keyframes slideInSharp {
+  0% {
+    opacity: 0;
+    transform: translateX(-100px) skewX(-15deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) skewX(0);
+  }
+}
+
+@keyframes zoomInBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-10deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+.persona-enter {
+  animation: slideInSharp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.persona-card-enter {
+  animation: zoomInBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ========== Utilidades ========== */
+.animate-in {
+  animation-duration: 0.5s;
+}
+
+.text-display {
+  font-family: var(--font-display);
+}
+
+.text-mono {
+  font-family: var(--font-mono);
+}
+
+/* Placeholder cuando no hay imagen de álbum */
+.album-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #1a1a24, #252530);
+  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}

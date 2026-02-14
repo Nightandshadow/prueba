@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi carrito</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="/css/style.css" rel="stylesheet" />
+</head>
+<body class="text-white antialiased">
+  <nav class="glass fixed top-0 left-0 right-0 z-50 mx-4 mt-4 rounded-xl">
+    <div class="flex items-center justify-between px-6 py-4">
+      <a href="/" class="text-xl font-bold flex items-center gap-2"><i data-lucide="store"></i> Tienda</a>
+      <div id="nav-links" data-nav class="flex items-center gap-6"></div>
+    </div>
+  </nav>
+
+  <main class="pt-28 pb-16 px-4 max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8 animate__animated animate__fadeInDown flex items-center gap-2">
+      <i data-lucide="shopping-cart"></i> Mi carrito
+    </h1>
+    <div id="cart-loading" class="flex justify-center py-12"><div class="spinner"></div></div>
+    <div id="cart-content" class="hidden">
+      <div id="cart-items" class="space-y-4 mb-8"></div>
+      <div class="glass-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-xl">Total: <strong id="cart-total" class="text-emerald-400">$0.00</strong></p>
+        <div class="flex gap-3">
+          <button type="button" id="btn-clear" class="px-4 py-2 rounded-lg bg-red-500/80 hover:bg-red-500 text-white flex items-center gap-2">
+            <i data-lucide="trash-2"></i> Vaciar carrito
+          </button>
+          <button type="button" id="btn-pay" class="px-6 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold flex items-center gap-2">
+            <i data-lucide="credit-card"></i> Pagar con Stripe
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="cart-empty" class="text-center py-12 text-white/70 hidden">
+      <i data-lucide="shopping-cart" class="w-16 h-16 mx-auto mb-4 opacity-50"></i>
+      <p>Tu carrito está vacío.</p>
+      <a href="/index.html" class="inline-block mt-4 text-emerald-400 hover:underline">Ver productos</a>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('redirect');
+    
+    // Cargar carrito desde localStorage
+    cart.loadFromStorage();
+    cart.render();
+    
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      cart.clear();
+      cart.render();
+      showSuccess('Carrito vaciado', 'Todos los productos han sido eliminados');
+        showLoading('Confirmando pago...');
+        try {
+          await payments.confirm();
+          closeLoading();
+          showSuccess('¡Pago realizado!', 'Tu pedido ha sido registrado.');
+        } catch (e) {
+          closeLoading();
+          showError('Error al confirmar', e.message);
+        }
+        window.history.replaceState({}, '', '/cart.html');
+        loadCart();
+      })();
+    } else if (params.get('payment') === 'cancel') {
+      showError('Pago cancelado', 'Puedes seguir comprando.');
+      window.history.replaceState({}, '', '/cart.html');
+    }
+
+    async function loadCart() {
+      const loading = document.getElementById('cart-loading');
+      const content = document.getElementById('cart-content');
+      const empty = document.getElementById('cart-empty');
+      try {
+        const data = await cart.get();
+        loading.classList.add('hidden');
+        if (!data.items || !data.items.length) {
+          empty.classList.remove('hidden');
+          return;
+        }
+        content.classList.remove('hidden');
+        document.getElementById('cart-items').innerHTML = data.items.map((item, i) => `
+          <div class="glass-card p-4 flex flex-wrap items-center justify-between gap-4 animate__animated animate__fadeInUp" style="animation-delay: ${i * 0.03}s">
+            <div>
+              <h3 class="font-semibold">${escapeHtml(item.nombre)}</h3>
+              <p class="text-white/70 text-sm">Código: ${escapeHtml(item.codigo)} · $${Number(item.precio).toFixed(2)} u.</p>
+            </div>
+            <div class="flex items-center gap-4">
+              <span class="text-white/90">Cant: ${item.cantidad}</span>
+              <span class="font-bold text-emerald-400">$${(Number(item.precio) * item.cantidad).toFixed(2)}</span>
+            </div>
+          </div>
+        `).join('');
+        document.getElementById('cart-total').textContent = '$' + Number(data.total).toFixed(2);
+        lucide.createIcons();
+      } catch (e) {
+        loading.classList.add('hidden');
+        empty.classList.remove('hidden');
+        empty.innerHTML = '<p>Error al cargar el carrito.</p><a href="/index.html" class="text-emerald-400 hover:underline">Volver</a>';
+      }
+    }
+
+    document.getElementById('btn-clear').addEventListener('click', async () => {
+      const result = await Swal.fire({ title: '¿Vaciar carrito?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, vaciar' });
+      if (!result.isConfirmed) return;
+      showLoading('Vaciando...');
+      try {
+        await cart.clear();
+        closeLoading();
+        showSuccess('Carrito vaciado');
+        loadCart();
+        document.getElementById('cart-content').classList.add('hidden');
+        document.getElementById('cart-empty').classList.remove('hidden');
+      } catch (e) {
+        closeLoading();
+        showError('Error', e.message);
+      }
+    });
+
+    document.getElementById('btn-pay').addEventListener('click', async () => {
+      const origin = window.location.origin;
+      showLoading('Preparando pago...');
+      try {
+        const data = await payments.createCheckoutSession(origin + '/cart.html?payment=success', origin + '/cart.html?payment=cancel');
+        closeLoading();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          showError('No se pudo crear la sesión de pago');
+        }
+      } catch (e) {
+        closeLoading();
+        showError('Error al iniciar pago', e.message);
+      }
+    });
+
+    if (!loadAfterConfirm) loadCart();
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  </script>
+</body>
+</html>
