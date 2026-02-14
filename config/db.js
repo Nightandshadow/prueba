@@ -13,14 +13,20 @@ const createPool = () => {
   }
 
   try {
+    // Limpiar la URL de la base de datos (eliminar espacios, saltos de línea)
+    const dbUrl = process.env.DATABASE_URL.trim();
+    
+    console.log('🔧 Configurando conexión a PostgreSQL...');
+    console.log('📊 URL de BD (primeros 20 chars):', dbUrl.substring(0, 20) + '...');
+
     const poolConfig = {
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' 
-        ? { rejectUnauthorized: false } 
-        : false,
+      connectionString: dbUrl,
+      ssl: {
+        rejectUnauthorized: false // Importante para Render
+      },
       max: 5,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 10000, // Aumentado a 10 segundos
     };
 
     const newPool = new Pool(poolConfig);
@@ -51,6 +57,7 @@ const testConnection = async () => {
   }
 
   try {
+    console.log('🔄 Probando conexión a PostgreSQL...');
     const client = await pool.connect();
     const result = await client.query('SELECT NOW() as time');
     client.release();
@@ -58,6 +65,11 @@ const testConnection = async () => {
     return true;
   } catch (err) {
     console.error('❌ Error al conectar a PostgreSQL:', err.message);
+    console.error('🔍 Detalles del error:', {
+      code: err.code,
+      host: err.host,
+      port: err.port
+    });
     return false;
   }
 };
@@ -89,7 +101,13 @@ const query = async (text, params) => {
   if (!pool) {
     throw new Error('Base de datos no configurada');
   }
-  return pool.query(text, params);
+  
+  try {
+    return await pool.query(text, params);
+  } catch (err) {
+    console.error('Error en query:', err.message);
+    throw err;
+  }
 };
 
 module.exports = {
